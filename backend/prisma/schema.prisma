@@ -1,0 +1,82 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for login
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String?
+  password  String // We will hash this later
+  items     Item[]
+  wasteLogs WasteLog[]
+  settings  Settings?
+  notifications Notification[]
+}
+
+// Main pantry item model
+model Item {
+  id           String    @id @default(uuid())
+  name         String
+  quantity     Float
+  unit         String?   // e.g., "pcs", "grams", "lbs"
+  purchaseDate DateTime?
+  expiryDate   DateTime
+  notes        String?   @db.Text
+  
+  // Link to the User
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+  
+  // Link to the Category
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+}
+
+// Category model
+model Category {
+  id    String @id @default(uuid())
+  name  String @unique
+  items Item[]
+}
+
+// Waste log model for analytics
+model WasteLog {
+  id       String   @id @default(uuid())
+  itemName String
+  quantity Float
+  action   String   // "USED" or "WASTED"
+  date     DateTime @default(now())
+  reason   String?  @db.Text
+  
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+}
+
+// Settings model
+model Settings {
+  id             String @id @default(uuid())
+  expiryLeadTime Int    @default(3) // Days
+  
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Link to the User
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
